@@ -11,6 +11,12 @@ this file and include it in basic-server.js so that it actually works.
 *Hint* Check out the node module documentation at http://nodejs.org/api/modules.html.
 
 **************************************************************/
+var qs = require('querystring');
+
+var ALL_MESSAGES = {
+  results : [{roomname: "lobby", username: "test", text: "test"}],
+};
+// ALL_MESSAGES.results = [];
 
 var requestHandler = function(request, response) {
   // Request and Response come from node's http module.
@@ -49,12 +55,55 @@ var requestHandler = function(request, response) {
   // anything back to the client until you do. The string you pass to
   // response.end() will be the body of the response - i.e. what shows
   // up in the browser.
+
+  // Make test message
+  var message = {
+    roomname : "lobby",
+    username : "test",
+    text : "test",
+  };
+
+  var send = {
+    results : [],
+  };
+  send.results.push(message);
+
+  // if (request.method === "OPTION") {
+  //   response.end();
+  // }
+  if (request.method === "GET") {
+    var statusCode = 200;
+
+    headers = defaultCorsHeaders;
+
+    headers['Content-Type'] = "text/JSON";
+
+    response.writeHead(statusCode, headers);
+    response.write(JSON.stringify(ALL_MESSAGES));
+
+    response.end();
+  }
+  else if (request.method === "POST") {
+    var dataHolder = "";
+    request.on('data', function(data) {
+      dataHolder = JSON.parse(data);
+      // console.log("data holder:", dataHolder.text);
+    });
+    request.on('end', function(data) {
+      ALL_MESSAGES.results.unshift(dataHolder);
+      console.log(ALL_MESSAGES[0]);
+    });
+  }
+
+
+
   //
   // Calling .end "flushes" the response's internal buffer, forcing
   // node to actually send all the data over to the client.
   response.end("Hello, World!");
 };
 
+module.exports = requestHandler;
 // These headers will allow Cross-Origin Resource Sharing (CORS).
 // This code allows this server to talk to websites that
 // are on different domains, for instance, your chat client.
