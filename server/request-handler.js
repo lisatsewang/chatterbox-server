@@ -13,6 +13,7 @@ this file and include it in basic-server.js so that it actually works.
 **************************************************************/
 var qs = require('querystring');
 var fs = require('fs');
+var path = require('path');
 
 var ALL_MESSAGES = {
   results : [{roomname: "lobby", username: "test", text: "test"}],
@@ -59,61 +60,104 @@ var requestHandler = function(request, response) {
 
   var setHeader = function(type) {
     var headers = defaultCorsHeaders;
-    headers['Content-Type'] = 'text/' + type;
+    headers['Content-Type'] = type;
     return headers
+  }
+  var returnContentType = function(ext) {
+    if (ext === ".js") {
+      return 'application/js';
+    }
+    else if (ext === ".css") {
+      return 'text/css';
+    }
+    else if (ext === ".html") {
+      return 'text/html';
+    }
+    else if (ext === '.JSON') {
+      return 'text/JSON';
+    }
+    else if (ext === '.png') {
+      return 'image/png';
+    }
+    else {
+      return 'text/plain';
+    }
   }
 
   // For serving up the html and js to the client on first connection
-  if (request.method === "GET" && request.url === "/") {
+  if (request.method === "GET") {
 
-    var readStream = fs.createReadStream("../client/index.html");
+    if (request.url === "/") {
 
+      var readStream = fs.createReadStream("../client/index.html");
 
+      readStream.setEncoding("utf8");
+      readStream.on('error', function(err) {
+        statusCode = 404;
+        response.end("ERROR 404 - FILE NOT FOUND");
+      });
 
-
-    readStream.setEncoding("utf8");
-    readStream.on('error', function(err) {
-      statusCode = 404;
-      response.end("ERROR 404 - FILE NOT FOUND");
-    });
-
-    readStream.on("open", function(chunk) {
+      readStream.on("open", function(chunk) {
+        statusCode = 200;
+        response.writeHead(statusCode, setHeader(returnContentType('.html')));
+        readStream.pipe(response);
+      });
+      readStream.on("end", function() {
+        response.end();
+      });
+    }
+    else if (request.url === "/classes/messages" || request.url === "/classes/room1") {
       statusCode = 200;
-      response.writeHead(statusCode, setHeader('html'));
-      readStream.pipe(response);
-    });
-    readStream.on("end", function() {
-      response.end();
-    });
-  }
+      response.writeHead(statusCode, setHeader(returnContentType('.JSON')));
+      response.end(JSON.stringify(ALL_MESSAGES));
+    }
+    else {
 
+      // Grab the extension
+      //var extension = request.url.split(".");
+      //extension = extension[extension.length - 1];
+      var ext = path.extname(request.url);
 
+      var readStream = fs.createReadStream("../client" + request.url);
 
-  // If the url calls for nonexistent files, return 404 error
-  else if (request.url !== "/classes/messages" && request.url !== "/classes/room1") {
+      //readStream.setEncoding("utf8");
 
-    statusCode = 404;
-    response.writeHead(statusCode, setHeader("JSON"));
-    response.end()
-  }
-  else if (request.method === "GET") {
+      readStream.on('error', function(err) {
+        statusCode = 404;
+        response.writeHead(statusCode, setHeader(returnContentType('.html')));
+        response.end("ERROR 404 - FILE NOT FOUND");
 
-    statusCode = 200;
-    response.writeHead(statusCode, setHeader("JSON"));
+      });
 
-    response.end(JSON.stringify(ALL_MESSAGES));
+      readStream.on("open", function(chunk) {
+        statusCode = 200;
+        response.writeHead(statusCode, setHeader(returnContentType(ext)));
+        readStream.pipe(response);
+      });
+      
+      readStream.on("end", function() {
+        response.end();
+      });
+
+    }
+    // else {
+    //   statusCode = 404;
+    //   response.writeHead(statusCode, setHeader("JSON"));
+    //   response.end();
+    // }
+
   }
   else if (request.method === "OPTIONS") {
 
     statusCode = 200;
-    response.writeHead(statusCode, setHeader("JSON"));
+    response.writeHead(statusCode, setHeader(returnContentType('.JSON')));
     response.end();
 
   }
   else if (request.method === "POST") {
 
     statusCode = 201;
-    response.writeHead(statusCode, setHeader("JSON"));
+    response.writeHead(statusCode, setHeader(returnContentType('.JSON')));
 
 
     var dataHolder = "";
@@ -129,6 +173,23 @@ var requestHandler = function(request, response) {
   else {
     response.end();
   }
+
+
+
+  // If the url calls for nonexistent files, return 404 error
+  // else if (request.url !== "/classes/messages" && request.url !== "/classes/room1") {
+
+  //   statusCode = 404;
+  //   response.writeHead(statusCode, setHeader("JSON"));
+  //   response.end()
+  // }
+  // else if (request.method === "GET") {
+
+  //   statusCode = 200;
+  //   response.writeHead(statusCode, setHeader("JSON"));
+
+  //   response.end(JSON.stringify(ALL_MESSAGES));
+  // }
 
   //
   // Calling .end "flushes" the response's internal buffer, forcing
