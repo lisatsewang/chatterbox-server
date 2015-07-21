@@ -5,7 +5,7 @@ $(function() {
   app = {
 //TODO: The current 'addFriend' function just adds the class 'friend'
 //to all messages sent by the user
-    server: 'http://127.0.0.1:3000/',
+    server: 'http://127.0.0.1:3000/classes/messages',
     username: 'anonymous',
     roomname: 'lobby',
     lastMessageId: 0,
@@ -60,11 +60,12 @@ $(function() {
         url: app.server,
         type: 'GET',
         contentType: 'application/json',
-        data: { order: '-createdAt'},
+        //data: { order: '-createdAt'},
+        //data: { url: '/classes/messages'},
         success: function(data) {
           console.log('chatterbox: Messages fetched');
           data = JSON.parse(data);
-          console.log(data);
+          //console.log(data);
           //debugger;
           // Don't bother if we have nothing to work with
           if (!data.results || !data.results.length) { return; }

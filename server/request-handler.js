@@ -16,7 +16,7 @@ var qs = require('querystring');
 var ALL_MESSAGES = {
   results : [{roomname: "lobby", username: "test", text: "test"}],
 };
-// ALL_MESSAGES.results = [];
+// ALL_MESSAGES.results = [{roomname: "lobby", username: "test", text: "test"}];
 
 var requestHandler = function(request, response) {
   // Request and Response come from node's http module.
@@ -39,68 +39,74 @@ var requestHandler = function(request, response) {
   var statusCode = 200;
 
   // See the note below about CORS headers.
-  var headers = defaultCorsHeaders;
+  //var headers = defaultCorsHeaders;
 
   // Tell the client we are sending them plain text.
   //
   // You will need to change this if you are sending something
   // other than plain text, like JSON or HTML.
-  headers['Content-Type'] = "text/plain";
+  //headers['Content-Type'] = "text/plain";
 
   // .writeHead() writes to the request line and headers of the response,
   // which includes the status and all headers.
-  response.writeHead(statusCode, headers);
+  //response.writeHead(statusCode, headers);
 
   // Make sure to always call response.end() - Node may not send
   // anything back to the client until you do. The string you pass to
   // response.end() will be the body of the response - i.e. what shows
   // up in the browser.
 
-  // Make test message
-  var message = {
-    roomname : "lobby",
-    username : "test",
-    text : "test",
-  };
+  var setHeader = function() {
+    var headers = defaultCorsHeaders;
+    headers['Content-Type'] = 'text/JSON';
+    return headers
+  }
 
-  var send = {
-    results : [],
-  };
-  send.results.push(message);
+  // If the url calls for nonexistent files, return 404 error
+  if (request.url !== "/classes/messages" && request.url !== "/classes/room1") {
 
-  // if (request.method === "OPTION") {
-  //   response.end();
-  // }
-  if (request.method === "GET") {
-    var statusCode = 200;
+    statusCode = 404;
+    response.writeHead(statusCode, setHeader());
+    response.end()
+  }
+  else if (request.method === "GET") {
 
-    headers = defaultCorsHeaders;
+    statusCode = 200;
+    response.writeHead(statusCode, setHeader());
 
-    headers['Content-Type'] = "text/JSON";
+    response.end(JSON.stringify(ALL_MESSAGES));
+  }
+  else if (request.method === "OPTIONS") {
 
-    response.writeHead(statusCode, headers);
-    response.write(JSON.stringify(ALL_MESSAGES));
-
+    statusCode = 200;
+    response.writeHead(statusCode, setHeader());
     response.end();
+
   }
   else if (request.method === "POST") {
+
+    statusCode = 201;
+    response.writeHead(statusCode, setHeader());
+
+
     var dataHolder = "";
     request.on('data', function(data) {
       dataHolder = JSON.parse(data);
-      // console.log("data holder:", dataHolder.text);
     });
     request.on('end', function(data) {
       ALL_MESSAGES.results.unshift(dataHolder);
-      console.log(ALL_MESSAGES[0]);
     });
+
+    response.end(JSON.stringify(ALL_MESSAGES));
   }
-
-
+  else {
+    response.end();
+  }
 
   //
   // Calling .end "flushes" the response's internal buffer, forcing
   // node to actually send all the data over to the client.
-  response.end("Hello, World!");
+  //response.end("Hello, World!");
 };
 
 module.exports = requestHandler;
