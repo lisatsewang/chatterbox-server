@@ -12,6 +12,7 @@ this file and include it in basic-server.js so that it actually works.
 
 **************************************************************/
 var qs = require('querystring');
+var fs = require('fs');
 
 var ALL_MESSAGES = {
   results : [{roomname: "lobby", username: "test", text: "test"}],
@@ -56,37 +57,63 @@ var requestHandler = function(request, response) {
   // response.end() will be the body of the response - i.e. what shows
   // up in the browser.
 
-  var setHeader = function() {
+  var setHeader = function(type) {
     var headers = defaultCorsHeaders;
-    headers['Content-Type'] = 'text/JSON';
+    headers['Content-Type'] = 'text/' + type;
     return headers
   }
 
+  // For serving up the html and js to the client on first connection
+  if (request.method === "GET" && request.url === "/") {
+
+    var readStream = fs.createReadStream("../client/index.html");
+
+
+
+
+    readStream.setEncoding("utf8");
+    readStream.on('error', function(err) {
+      statusCode = 404;
+      response.end("ERROR 404 - FILE NOT FOUND");
+    });
+
+    readStream.on("open", function(chunk) {
+      statusCode = 200;
+      response.writeHead(statusCode, setHeader('html'));
+      readStream.pipe(response);
+    });
+    readStream.on("end", function() {
+      response.end();
+    });
+  }
+
+
+
   // If the url calls for nonexistent files, return 404 error
-  if (request.url !== "/classes/messages" && request.url !== "/classes/room1") {
+  else if (request.url !== "/classes/messages" && request.url !== "/classes/room1") {
 
     statusCode = 404;
-    response.writeHead(statusCode, setHeader());
+    response.writeHead(statusCode, setHeader("JSON"));
     response.end()
   }
   else if (request.method === "GET") {
 
     statusCode = 200;
-    response.writeHead(statusCode, setHeader());
+    response.writeHead(statusCode, setHeader("JSON"));
 
     response.end(JSON.stringify(ALL_MESSAGES));
   }
   else if (request.method === "OPTIONS") {
 
     statusCode = 200;
-    response.writeHead(statusCode, setHeader());
+    response.writeHead(statusCode, setHeader("JSON"));
     response.end();
 
   }
   else if (request.method === "POST") {
 
     statusCode = 201;
-    response.writeHead(statusCode, setHeader());
+    response.writeHead(statusCode, setHeader("JSON"));
 
 
     var dataHolder = "";
